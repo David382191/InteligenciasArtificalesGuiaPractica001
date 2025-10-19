@@ -1,0 +1,69 @@
+# =========================
+# 💾 FUNCIÓN PARA CONSUMIR LA API
+# =========================
+@st.cache_data
+def get_data(year, region, tipo):
+    url = 
+    params = {
+        "year": year,
+        "region": region,
+        "type": tipo
+    }
+
+    # 👇 Esto nos sirve para depurar
+    st.write("🔗 URL generada:", url)
+    st.write("📦 Parámetros enviados:", params)
+
+    response = requests.get(url, params=params)
+    st.write("📡 Código de respuesta HTTP:", response.status_code)
+    st.write("📃 Texto de respuesta:", response.text[:500])  # solo 500 caracteres
+
+    if response.status_code == 200:
+        try:
+            data = response.json()
+            df = pd.DataFrame(data)
+            return df
+        except Exception as e:
+            st.error(f"❌ Error al convertir JSON: {e}")
+            return pd.DataFrame()
+    else:
+        st.error(f"❌ Error {response.status_code}: No se pudo obtener la data")
+        return pd.DataFrame()
+
+
+# =========================
+# 📂 ALTERNATIVA CON CSV (si no hay API)
+# =========================
+@st.cache_data
+def load_csv():
+    try:
+        return pd.read_csv("contrataciones.csv")
+    except FileNotFoundError:
+        st.warning("⚠️ No se encontró el archivo CSV. Solo se usará la API.")
+        return pd.DataFrame()
+
+# =========================
+# 📊 MOSTRAR RESULTADOS
+# =========================
+if buscar:
+    df = get_data(year, region, tipo)
+
+    if df.empty:
+        # Intentar con CSV si la API falla
+        df = load_csv()
+        if not df.empty:
+            df = df[
+                (df["year"] == year) &
+                (df["region"] == region) &
+                (df["type"] == tipo)
+            ]
+
+    if not df.empty:
+        st.success("✅ Datos cargados correctamente")
+        st.dataframe(df)
+
+        # Pequeña estadística como ejemplo
+        st.subheader("📈 Estadísticas rápidas")
+        st.write(df.describe())
+    else:
+        st.error("❌ No se encontraron datos para los filtros seleccionados.")
