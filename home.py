@@ -166,3 +166,120 @@ fig_scatter = px.scatter(
     title="Monto Total vs Cantidad de Contratos (simulado)"
 )
 st.plotly_chart(fig_scatter, use_container_width=True)
+
+
+# --- 11. Comparativa de Tipos de Contratación por Mes ---
+st.header("📈 Comparativa de Tipos de Contratación por Mes")
+
+# Asegurarnos de tener columna 'month' (ya se creó antes, si no, la creamos)
+if "month" not in filtered_df.columns:
+    filtered_df["month"] = [random.randint(1,12) for _ in range(len(filtered_df))]
+
+# internal_type será company_name
+filtered_df["internal_type"] = filtered_df["company_name"]
+
+# Agrupamos por mes e internal_type y sumamos montos
+df_line = filtered_df.groupby(["month", "internal_type"])["monto"].sum().reset_index()
+
+# Gráfico de líneas
+fig_line_type = px.line(
+    df_line,
+    x="month",
+    y="monto",
+    color="internal_type",
+    markers=True,
+    title="Comportamiento mensual de 'monto' por tipo de empresa",
+    labels={"month": "Mes", "monto": "Monto Total", "internal_type": "Empresa"}
+)
+st.plotly_chart(fig_line_type, use_container_width=True)
+
+# Breve interpretación debajo
+st.markdown("""
+**Interpretación:**  
+Este gráfico muestra la evolución del monto total simulado por empresa a lo largo de los meses.  
+Se puede observar qué empresas (tipos) concentran mayor monto en ciertos meses y comparar su comportamiento relativo.
+""")
+
+
+
+
+
+st.header("📊 12- Análisis por Años")
+
+# --- 1. Asegurarnos de tener columna 'year' ---
+if "year" not in filtered_df.columns:
+    filtered_df["year"] = [random.choice([2022, 2023, 2024]) for _ in range(len(filtered_df))]
+
+# internal_type será company_name
+filtered_df["internal_type"] = filtered_df["company_name"]
+
+# --- 2. KPIs por año ---
+st.subheader("🏷️ KPIs por año")
+kpis_year = filtered_df.groupby("year")["monto"].agg(["count","sum","mean","max","min"]).reset_index()
+st.dataframe(kpis_year)
+
+# --- 3. Barras apiladas tipo × año ---
+st.subheader("📊 Montos por empresa y año (barras apiladas)")
+df_stack_year = filtered_df.groupby(["year","internal_type"])["monto"].sum().reset_index()
+fig_stack_year = px.bar(
+    df_stack_year,
+    x="year",
+    y="monto",
+    color="internal_type",
+    barmode="stack",
+    title="Monto total por empresa y año"
+)
+st.plotly_chart(fig_stack_year, use_container_width=True)
+
+# --- 4. Evolución mensual comparada ---
+st.subheader("📈 Evolución mensual comparada por año")
+df_line_year = filtered_df.groupby(["year","month"])["monto"].sum().reset_index()
+fig_line_year = px.line(
+    df_line_year,
+    x="month",
+    y="monto",
+    color="year",
+    markers=True,
+    title="Monto mensual por año",
+    labels={"month":"Mes","monto":"Monto total","year":"Año"}
+)
+st.plotly_chart(fig_line_year, use_container_width=True)
+
+# --- 5. Heatmap año × mes ---
+st.subheader("🌡️ Heatmap año × mes")
+heatmap_df = df_line_year.pivot(index="year", columns="month", values="monto")
+fig_heatmap = px.imshow(
+    heatmap_df,
+    labels={"x":"Mes","y":"Año","color":"Monto"},
+    text_auto=True,
+    aspect="auto",
+    title="Mapa de calor de monto por año y mes"
+)
+st.plotly_chart(fig_heatmap, use_container_width=True)
+
+# --- 6. Interpretación ---
+st.markdown("""
+**Interpretación:**  
+- Podemos comparar los montos por año y detectar picos o caídas simuladas.  
+- Barras apiladas muestran qué empresas contribuyen más al total en cada año.  
+- La línea mensual permite ver tendencias y variabilidad mes a mes.  
+- El heatmap facilita identificar meses con mayor actividad o concentración de monto.
+""")
+
+
+
+
+
+
+st.header("💾 13- Exportar Resultados")
+
+# Convertir DataFrame filtrado a CSV
+csv = filtered_df.to_csv(index=False).encode("utf-8")
+
+# Botón de descarga
+st.download_button(
+    label="Descargar datos filtrados como CSV",
+    data=csv,
+    file_name="usuarios_filtrados.csv",
+    mime="text/csv"
+)
